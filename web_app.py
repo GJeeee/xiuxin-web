@@ -89,6 +89,9 @@ def health():
 
 
 if __name__ == "__main__":
-    port = int(__import__("os").environ.get("WEB_PORT", "8765"))
+    import os
+
+    port = int(os.environ.get("PORT", os.environ.get("WEB_PORT", "8765")))
+    debug = os.environ.get("FLASK_DEBUG", "").lower() in ("1", "true", "yes")
     print(f"修心 SOP 网页：http://127.0.0.1:{port}")
-    APP.run(host="0.0.0.0", port=port, debug=True)
+    APP.run(host="0.0.0.0", port=port, debug=debug)

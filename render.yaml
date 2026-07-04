@@ -1,0 +1,15 @@
+# Render Blueprint：连接 GitHub 仓库后自动部署
+# https://dashboard.render.com/select-repo?type=blueprint
+services:
+  - type: web
+    name: xiuxin-web
+    runtime: python
+    plan: free
+    branch: main
+    buildCommand: pip install -r requirements-web.txt
+    startCommand: gunicorn --bind 0.0.0.0:$PORT --workers 2 --timeout 120 web_app:APP
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.7"

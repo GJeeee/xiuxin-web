@@ -1,0 +1,14 @@
+# 推送到 main 后通知 Render 重新部署（需在 GitHub Secrets 配置 RENDER_DEPLOY_HOOK）
+name: Deploy to Render
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: ${{ secrets.RENDER_DEPLOY_HOOK != '' }}
+    steps:
+      - name: Trigger Render deploy
+        run: curl -fsS -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}"
