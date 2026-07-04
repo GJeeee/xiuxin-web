@@ -1,0 +1,12 @@
+# 勿提交密钥
+.env
+/data/
+__pycache__/
+*.pyc
+.venv/
+venv/
+logs/
+.tmp_*
+.tmp_pdf_pages/
+tmp_pdf_pages/
+.DS_Store

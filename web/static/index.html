@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>修心</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600&family=Noto+Sans+SC:wght@300;400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            paper: { DEFAULT: '#f7f5f0', deep: '#efeae2' },
+            ink: { DEFAULT: '#333333', soft: '#5c5a56', muted: '#9a9590' },
+            clay: { DEFAULT: '#a67c6a', light: '#d4b8a8' },
+            bamboo: { DEFAULT: '#6b8f71', light: '#a8c4ab' },
+          },
+          fontFamily: {
+            serif: ['"Noto Serif SC"', 'Songti SC', 'STSong', 'serif'],
+            sans: ['"Noto Sans SC"', 'PingFang SC', 'system-ui', 'sans-serif'],
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    [v-cloak] { display: none; }
+    .fade-enter-active, .fade-leave-active { transition: opacity 0.35s ease, transform 0.35s ease; }
+    .fade-enter-from { opacity: 0; transform: translateY(8px); }
+    .fade-leave-to { opacity: 0; transform: translateY(-4px); }
+    .slide-enter-active, .slide-leave-active { transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+    .slide-enter-from { opacity: 0; transform: translateY(24px); }
+    .slide-leave-to { opacity: 0; transform: translateY(-12px); }
+    input[type="date"]::-webkit-calendar-picker-indicator { opacity: 0.4; }
+    .input-line {
+      border: none; border-bottom: 1px solid #e5e0d8; border-radius: 0;
+      background: transparent; transition: border-color 0.2s;
+    }
+    .input-line:focus { outline: none; border-bottom-color: #a67c6a; }
+    .input-soft {
+      border: none; background: rgba(255,255,255,0.35); border-radius: 6px;
+      transition: background 0.2s;
+    }
+    .input-soft:focus { outline: none; background: rgba(255,255,255,0.7); }
+    .input-cell {
+      border: none; background: rgba(255,255,255,0.35); border-radius: 6px;
+      transition: background 0.2s;
+    }
+    .input-cell:focus { outline: none; background: rgba(255,255,255,0.7); }
+    .sop-panel-enter-active, .sop-panel-leave-active { transition: opacity 0.3s ease; }
+    .sop-panel-enter-from, .sop-panel-leave-to { opacity: 0; }
+    .sop-expand-enter-active { transition: all 0.35s ease; overflow: hidden; }
+    .sop-expand-leave-active { transition: all 0.25s ease; overflow: hidden; }
+    .sop-expand-enter-from, .sop-expand-leave-to { opacity: 0; max-height: 0; }
+    .sop-expand-enter-to, .sop-expand-leave-from { opacity: 1; max-height: 800px; }
+    .path-md h3 { font-family: "Noto Serif SC", serif; font-size: 0.9rem; color: #333; margin: 1.25rem 0 0.5rem; }
+    .path-md h4 { font-size: 0.85rem; color: #5c5a56; margin: 1rem 0 0.4rem; }
+    .path-md p { margin: 0.65rem 0; }
+    .path-md ul, .path-md ol { margin: 0.5rem 0 0.75rem 1.1rem; }
+    .path-md li { margin: 0.25rem 0; }
+    .path-md blockquote { border-left: 2px solid #d4b8a8; padding-left: 0.75rem; margin: 0.75rem 0; color: #a67c6a; font-family: "Noto Serif SC", serif; }
+    .path-md table { width: 100%; border-collapse: collapse; margin: 0.75rem 0; font-size: 0.75rem; }
+    .path-md th, .path-md td { border: 1px solid #efeae2; padding: 0.35rem 0.5rem; text-align: left; vertical-align: top; }
+    .path-md th { background: rgba(239,234,226,0.6); color: #5c5a56; font-weight: 500; }
+    .path-md hr { border: none; border-top: 1px solid #efeae2; margin: 1rem 0; }
+    .path-md strong { color: #333; font-weight: 600; }
+  </style>
+</head>
+<body class="h-full font-sans text-ink antialiased">
+  <div id="app" v-cloak class="min-h-full bg-paper relative overflow-x-hidden">
+    <!-- 背景纹理 -->
+    <div class="pointer-events-none fixed inset-0 bg-[radial-gradient(ellipse_70%_50%_at_50%_-10%,rgba(212,184,168,0.12),transparent),radial-gradient(ellipse_50%_40%_at_100%_100%,rgba(107,143,113,0.06),transparent)]"></div>
+
+    <div class="relative mx-auto flex min-h-full flex-col px-6">
+      <!-- Hero：输入页大标题 + 每日签文 -->
+      <header v-if="phase === 'input'" class="flex-shrink-0 pt-20 pb-4 text-center sm:pt-28">
+        <h1 class="font-serif text-4xl font-normal tracking-[0.3em] text-ink sm:text-5xl">修心</h1>
+        <p class="mt-8 font-serif text-sm tracking-[0.2em] text-ink-soft transition-opacity duration-500">
+          {{ dailyQuote }}
+        </p>
+      </header>
+
+      <!-- 结果页顶栏（紧凑） -->
+      <header v-else-if="phase === 'result'" class="flex-shrink-0 pt-12 pb-2 text-center">
+        <h1 class="font-serif text-2xl tracking-[0.2em] text-ink">修心</h1>
+        <div class="mx-auto mt-4 h-px w-6 bg-clay-light/60"></div>
+      </header>
+
+      <!-- 加载页顶栏 -->
+      <header v-else class="flex-shrink-0 pt-20 text-center">
+        <h1 class="font-serif text-3xl tracking-[0.25em] text-ink-muted">修心</h1>
+      </header>
+
+      <!-- 主内容区 -->
+      <div class="mx-auto w-full max-w-md flex-1 pb-16"
+        :class="phase === 'input' ? 'mt-12 sm:mt-16' : 'mt-6'">
+      <Transition name="slide" mode="out-in">
+        <section v-if="phase === 'input'" key="input"
+          class="rounded-xl bg-white/30 px-7 py-9 backdrop-blur-[2px]">
+          <form @submit.prevent="submit" class="space-y-7">
+            <!-- 性别 + 出生地 -->
+            <div class="flex items-end gap-5">
+              <div class="flex gap-4">
+                <button type="button" v-for="g in ['女','男']" :key="g"
+                  @click="form.gender = g"
+                  :class="form.gender === g
+                    ? 'text-ink'
+                    : 'text-ink-muted/60 hover:text-ink-soft'"
+                  class="input-line border-b pb-1.5 font-serif text-base transition-colors"
+                  :class="form.gender === g ? 'border-ink text-ink' : 'border-transparent text-ink-muted/60 hover:text-ink-soft'">
+                  {{ g }}
+                </button>
+              </div>
+              <input v-model="form.place" type="text" placeholder="出生地"
+                class="input-line flex-1 pb-1.5 text-sm text-ink placeholder:text-ink-muted/50">
+            </div>
+
+            <!-- 出生 年月日时分 -->
+            <div class="grid grid-cols-5 gap-2">
+              <input v-model.number="form.year" type="number" placeholder="年" min="1920" max="2035" required
+                class="input-cell px-2 py-2 text-center text-sm tabular-nums text-ink">
+              <input v-model.number="form.month" type="number" placeholder="月" min="1" max="12" required
+                class="input-cell px-2 py-2 text-center text-sm tabular-nums text-ink">
+              <input v-model.number="form.day" type="number" placeholder="日" min="1" max="31" required
+                class="input-cell px-2 py-2 text-center text-sm tabular-nums text-ink">
+              <input v-model.number="form.hour" type="number" placeholder="时" min="0" max="23" required
+                class="input-cell px-2 py-2 text-center text-sm tabular-nums text-ink">
+              <input v-model.number="form.minute" type="number" placeholder="分" min="0" max="59"
+                class="input-cell px-2 py-2 text-center text-sm tabular-nums text-ink">
+            </div>
+
+            <!-- 基准日（默认今日，可展开回溯） -->
+            <div class="flex items-center justify-between text-[11px] text-ink-muted">
+              <span v-if="!showAdvanced">基准 · 今日</span>
+              <button v-if="!showAdvanced" type="button" @click="showAdvanced = true"
+                class="text-ink-muted/70 underline-offset-2 hover:text-clay hover:underline">
+                回溯
+              </button>
+              <template v-else>
+                <label class="flex items-center gap-2">
+                  <span>基准日</span>
+                  <input v-model="form.reference_date" type="date"
+                    class="input-line pb-0.5 text-[11px] text-ink">
+                </label>
+                <button type="button" @click="showAdvanced = false; form.reference_date = todayISO()"
+                  class="text-ink-muted/70 hover:text-clay">收起</button>
+              </template>
+              <label class="flex cursor-pointer items-center gap-1.5 select-none">
+                <input v-model="form.use_true_solar" type="checkbox"
+                  class="h-3 w-3 rounded border-ink-muted/20 text-clay focus:ring-0">
+                真太阳时
+              </label>
+            </div>
+
+            <button type="submit" :disabled="loading"
+              class="w-full py-3 font-serif text-sm tracking-[0.3em] text-ink transition hover:text-clay disabled:opacity-40">
+              {{ loading ? '推算中…' : '排盘修心' }}
+            </button>
+          </form>
+
+          <p class="mt-10 text-center font-serif text-[10px] tracking-[0.15em] text-ink-muted/70">
+            不怨人 · 找好处 · 认不是
+          </p>
+        </section>
+
+        <!-- ===== 加载 ===== -->
+        <section v-else-if="phase === 'loading'" key="loading" class="py-24 text-center">
+          <p class="font-serif text-lg tracking-widest text-ink-muted animate-pulse">整理建议…</p>
+        </section>
+
+        <!-- ===== 结果 SPA ===== -->
+        <section v-else-if="phase === 'result' && report" key="result" class="space-y-8">
+          <!-- 用户信息 -->
+          <div class="text-center">
+            <p class="font-serif text-lg tracking-wide text-ink">
+              {{ report.gender }} · {{ report.day_master }}{{ report.day_master_wx }} · {{ birthYear }}年
+            </p>
+            <p class="mt-2 font-serif text-xl tracking-[0.15em] text-ink/80">{{ report.pillars }}</p>
+            <p class="mt-3 text-xs leading-relaxed text-ink-muted">{{ report.pattern }}</p>
+          </div>
+
+          <!-- 晨起立志 -->
+          <div class="rounded-2xl bg-gradient-to-br from-paper-deep/80 to-white/40 px-8 py-10 text-center">
+            <p class="text-[10px] uppercase tracking-[0.2em] text-clay">晨起立志</p>
+            <p class="mt-4 font-serif text-xl leading-loose text-ink sm:text-2xl">{{ report.morning_motto }}</p>
+          </div>
+
+          <!-- Tabs -->
+          <div class="flex justify-center gap-1 rounded-full bg-white/40 p-1 backdrop-blur-sm">
+            <button v-for="t in tabs" :key="t.id" type="button" @click="activeTab = t.id"
+              :class="activeTab === t.id
+                ? 'bg-white text-ink shadow-sm'
+                : 'text-ink-muted hover:text-ink-soft'"
+              class="rounded-full px-4 py-2 text-xs tracking-wider transition-all duration-300">
+              {{ t.label }}
+            </button>
+          </div>
+
+          <!-- Tab 内容 -->
+          <div class="min-h-[280px] rounded-2xl bg-white/50 px-8 py-10 shadow-sm backdrop-blur-sm">
+            <Transition name="fade" mode="out-in">
+              <div :key="activeTab">
+                <template v-if="currentBlock">
+                  <div class="mb-6 flex items-center justify-between">
+                    <span :class="levelClass(currentBlock.level)"
+                      class="rounded-full px-3 py-0.5 text-[11px] tracking-wide">
+                      {{ levelLabel(currentBlock.level) }}
+                    </span>
+                    <span class="text-[11px] text-ink-muted">{{ currentMeta }}</span>
+                  </div>
+                  <p class="text-sm leading-relaxed text-ink-soft">{{ currentBlock.body }}</p>
+                  <p class="mt-8 border-l-2 border-clay-light pl-4 text-sm leading-relaxed text-clay">
+                    {{ currentBlock.action }}
+                  </p>
+                </template>
+                <template v-else-if="activeTab === 'health'">
+                  <div class="mb-6 flex items-center justify-between">
+                    <span :class="levelClass(report.health.level)"
+                      class="rounded-full px-3 py-0.5 text-[11px] tracking-wide">
+                      {{ levelLabel(report.health.level) }}
+                    </span>
+                    <span class="text-[11px] text-ink-muted">身心</span>
+                  </div>
+                  <div class="mb-4 flex flex-wrap gap-2">
+                    <span v-for="(t, i) in report.traits" :key="i"
+                      class="rounded-full bg-paper-deep px-3 py-1 text-[11px] text-ink-soft">{{ t }}</span>
+                  </div>
+                  <p class="text-sm leading-relaxed text-ink-soft">{{ report.health.body }}</p>
+                  <p class="mt-8 border-l-2 border-bamboo-light pl-4 text-sm leading-relaxed text-bamboo">
+                    {{ report.health.action }}
+                  </p>
+                </template>
+              </div>
+            </Transition>
+          </div>
+
+          <!-- 时空信息 -->
+          <p class="text-center text-[10px] leading-loose text-ink-muted/80">
+            日 {{ report.current_day }} · 月 {{ report.current_liuyue }} · 年 {{ report.current_liunian }} · 运 {{ report.current_dayun }}
+          </p>
+
+          <!-- 完整修心路径 -->
+          <div class="pt-4 text-center">
+            <button type="button" @click="openSopPath"
+              class="font-serif text-sm tracking-[0.2em] text-ink-muted transition hover:text-clay">
+              完整修心路径
+            </button>
+          </div>
+
+          <div class="flex justify-center gap-6 pt-4">
+            <button type="button" @click="reset"
+              class="text-xs tracking-wider text-ink-muted transition hover:text-clay">
+              重新输入
+            </button>
+          </div>
+
+          <p class="pb-8 text-center text-[10px] leading-relaxed text-ink-muted/70">
+            以上仅供参考，非宿命承诺 · 健康非医学建议
+          </p>
+        </section>
+      </Transition>
+
+      <!-- 王凤仪性命哲学 · 完整修心路径 -->
+      <Transition name="sop-panel">
+        <div v-if="showSopPath" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-ink/20 backdrop-blur-sm p-0 sm:p-6"
+          @click.self="showSopPath = false">
+          <div class="flex h-[92vh] sm:h-auto sm:max-h-[88vh] w-full max-w-lg flex-col rounded-t-2xl sm:rounded-2xl bg-paper shadow-xl relative">
+            <!-- 面板头 -->
+            <div class="relative flex-shrink-0 border-b border-paper-deep px-6 py-5 text-center">
+              <p class="font-serif text-lg tracking-[0.12em] text-ink">{{ pathData?.title || '王凤仪性命哲学浅述' }}</p>
+              <p class="mt-1 text-[10px] tracking-widest text-ink-muted">{{ pathData?.subtitle || '原书逐章展开' }}</p>
+              <button type="button" @click="showSopPath = false"
+                class="absolute right-5 top-5 text-ink-muted/60 hover:text-clay text-lg leading-none">&times;</button>
+            </div>
+
+            <p v-if="pathData?.motto" class="flex-shrink-0 border-b border-paper-deep/60 px-6 py-3 text-center font-serif text-xs text-clay/90">
+              {{ pathData.motto }}
+            </p>
+
+            <!-- 五篇导航 -->
+            <div v-if="pathData" class="flex-shrink-0 overflow-x-auto border-b border-paper-deep/40 px-3 py-3">
+              <div class="flex min-w-max items-center gap-1.5 px-1">
+                <button v-for="part in pathData.parts" :key="part.id" type="button"
+                  @click="selectPathPart(part.id)"
+                  :class="selectedPathPart === part.id ? 'bg-clay/15 text-clay ring-1 ring-clay/25' : 'text-ink-muted hover:bg-white/60'"
+                  class="rounded-full px-3 py-1 text-[11px] tracking-wide transition whitespace-nowrap">
+                  {{ part.short }}
+                </button>
+              </div>
+            </div>
+
+            <!-- 加载 / 错误 -->
+            <div v-if="pathLoading" class="flex-1 flex items-center justify-center text-sm text-ink-muted">正在载入全书章节…</div>
+            <div v-else-if="pathError" class="flex-1 flex items-center justify-center px-6 text-sm text-clay">{{ pathError }}</div>
+
+            <!-- 当前篇 · 章节目录（点击展开全文） -->
+            <div v-else-if="currentPathPart" class="flex-1 overflow-y-auto px-4 pb-6">
+              <p class="sticky top-0 z-10 bg-paper/95 backdrop-blur-sm py-3 font-serif text-sm tracking-wide text-ink">
+                {{ currentPathPart.title }}
+                <span class="ml-2 text-[10px] text-ink-muted">共 {{ currentPathPart.chapters.length }} 章</span>
+              </p>
+
+              <div class="relative ml-3 border-l border-clay-light/40 pl-5 space-y-2">
+                <div v-for="(ch, idx) in currentPathPart.chapters" :key="ch.id" class="relative">
+                  <span class="absolute -left-[1.55rem] top-4 h-2 w-2 rounded-full border border-clay-light bg-paper"
+                    :class="expandedPathChapter === ch.id ? 'bg-clay border-clay' : ''"></span>
+
+                  <button type="button" @click="togglePathChapter(ch.id)"
+                    class="w-full rounded-xl text-left transition"
+                    :class="expandedPathChapter === ch.id ? 'bg-white/80 shadow-sm' : 'bg-white/30 hover:bg-white/50'">
+                    <div class="flex items-start gap-3 px-4 py-3.5">
+                      <span class="mt-0.5 font-serif text-[11px] text-clay/70 shrink-0 w-5">{{ idx + 1 }}</span>
+                      <div class="flex-1 min-w-0">
+                        <p class="font-serif text-sm text-ink leading-snug">{{ ch.title }}</p>
+                        <p v-if="expandedPathChapter !== ch.id" class="mt-1 line-clamp-2 text-[11px] leading-relaxed text-ink-muted">
+                          {{ chapterPreview(ch.content) }}
+                        </p>
+                      </div>
+                      <span class="mt-1 text-ink-muted/40 text-xs transition-transform duration-300 shrink-0"
+                        :class="expandedPathChapter === ch.id ? 'rotate-180' : ''">▾</span>
+                    </div>
+                  </button>
+
+                  <Transition name="sop-expand">
+                    <div v-if="expandedPathChapter === ch.id" class="mx-1 mb-3 rounded-xl bg-white/50 px-4 pb-5 pt-2 border border-paper-deep/50">
+                      <div class="path-md text-[13px] leading-relaxed text-ink-soft" v-html="renderPathMarkdown(ch.content)"></div>
+                    </div>
+                  </Transition>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Transition>
+
+      <!-- 错误 -->
+      <p v-if="error" class="mt-4 text-center text-sm text-clay">{{ error }}</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script>
+    const { createApp, ref, computed } = Vue;
+
+    const DAILY_QUOTES = [
+      "今日宜静守",
+      "诸事皆宜",
+      "心平气和",
+      "宜认不是",
+      "宜找好处",
+      "不争不贪",
+      "意回根",
+      "宜少言",
+      "宜早眠",
+      "动中守志",
+      "事坏人不坏",
+      "宜知退",
+      "宜尽伦常",
+      "忌争理",
+      "宜宽人",
+      "宜道过",
+      "今日宜缓",
+      "宜守心",
+      "宜养德",
+      "宜观心",
+      "忌存人不对",
+      "宜达全体",
+      "宜达天时",
+      "今日宜和",
+      "宜诚意",
+      "忌贪高",
+      "宜低处行",
+      "今日宜省",
+      "宜止怨",
+      "宜化性",
+    ];
+
+    function pickDailyQuote(dateStr) {
+      let h = 0;
+      for (let i = 0; i < dateStr.length; i++) {
+        h = (Math.imul(31, h) + dateStr.charCodeAt(i)) | 0;
+      }
+      return DAILY_QUOTES[Math.abs(h) % DAILY_QUOTES.length];
+    }
+
+    function todayISO() {
+      const d = new Date();
+      const off = d.getTimezoneOffset();
+      const local = new Date(d.getTime() - off * 60000);
+      return local.toISOString().slice(0, 10);
+    }
+
+    if (typeof marked !== 'undefined') {
+      marked.setOptions({ breaks: true, gfm: true });
+    }
+
+    createApp({
+      setup() {
+        const phase = ref('input');
+        const loading = ref(false);
+        const error = ref('');
+        const report = ref(null);
+        const birthYear = ref('');
+        const activeTab = ref('today');
+        const showAdvanced = ref(false);
+        const showSopPath = ref(false);
+        const pathData = ref(null);
+        const pathLoading = ref(false);
+        const pathError = ref('');
+        const selectedPathPart = ref('preface');
+        const expandedPathChapter = ref(null);
+        const todayStr = todayISO();
+
+        const currentPathPart = computed(() => {
+          if (!pathData.value) return null;
+          return pathData.value.parts.find(p => p.id === selectedPathPart.value) || pathData.value.parts[0];
+        });
+
+        const form = ref({
+          gender: '女',
+          year: null,
+          month: null,
+          day: null,
+          hour: null,
+          minute: 0,
+          place: '',
+          reference_date: todayStr,
+          use_true_solar: true,
+        });
+
+        const dailyQuote = computed(() =>
+          pickDailyQuote(form.value.reference_date || todayStr)
+        );
+
+        const tabs = [
+          { id: 'today', label: '今日', key: 'daily' },
+          { id: 'month', label: '本月', key: 'monthly' },
+          { id: 'year', label: '流年', key: 'yearly' },
+          { id: 'dayun', label: '大运', key: 'dayun' },
+          { id: 'health', label: '身心', key: 'health' },
+        ];
+
+        const currentBlock = computed(() => {
+          if (!report.value || activeTab.value === 'health') return null;
+          const t = tabs.find(x => x.id === activeTab.value);
+          return t ? report.value[t.key] : null;
+        });
+
+        const currentMeta = computed(() => {
+          if (!report.value) return '';
+          const map = {
+            today: report.value.current_day,
+            month: report.value.current_liuyue,
+            year: report.value.current_liunian,
+            dayun: report.value.current_dayun,
+          };
+          return map[activeTab.value] || '';
+        });
+
+        function levelLabel(l) {
+          return { '平': '平稳', '留意': '宜留意', '加紧': '宜加紧' }[l] || l;
+        }
+
+        function levelClass(l) {
+          const base = 'font-medium ';
+          if (l === '加紧') return base + 'bg-clay/10 text-clay';
+          if (l === '留意') return base + 'bg-amber-100/60 text-amber-800/70';
+          return base + 'bg-bamboo/10 text-bamboo';
+        }
+
+        async function submit() {
+          error.value = '';
+          loading.value = true;
+          phase.value = 'loading';
+          birthYear.value = form.value.year;
+
+          try {
+            const res = await fetch('/api/analyze', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(form.value),
+            });
+            const json = await res.json();
+            if (!json.ok) throw new Error(json.error || '推算失败');
+            report.value = json.data;
+            activeTab.value = 'today';
+            phase.value = 'result';
+          } catch (e) {
+            error.value = e.message || '网络错误';
+            phase.value = 'input';
+          } finally {
+            loading.value = false;
+          }
+        }
+
+        function reset() {
+          phase.value = 'input';
+          report.value = null;
+          error.value = '';
+          showAdvanced.value = false;
+          showSopPath.value = false;
+          expandedPathChapter.value = null;
+          form.value.reference_date = todayISO();
+        }
+
+        async function loadPathData() {
+          if (pathData.value) return;
+          pathLoading.value = true;
+          pathError.value = '';
+          try {
+            const res = await fetch('/static/data/wangfengyi-path.json');
+            if (!res.ok) throw new Error('章节数据加载失败');
+            pathData.value = await res.json();
+          } catch (e) {
+            pathError.value = e.message || '无法载入修心路径';
+          } finally {
+            pathLoading.value = false;
+          }
+        }
+
+        async function openSopPath() {
+          showSopPath.value = true;
+          expandedPathChapter.value = null;
+          await loadPathData();
+        }
+
+        function selectPathPart(id) {
+          selectedPathPart.value = id;
+          expandedPathChapter.value = null;
+        }
+
+        function togglePathChapter(id) {
+          expandedPathChapter.value = expandedPathChapter.value === id ? null : id;
+        }
+
+        function chapterPreview(content) {
+          if (!content) return '';
+          return content.replace(/^#+\s*/gm, '').replace(/\*\*/g, '').replace(/\n+/g, ' ').trim().slice(0, 72) + '…';
+        }
+
+        function renderPathMarkdown(content) {
+          if (!content) return '';
+          if (typeof marked === 'undefined') {
+            return content.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+          }
+          return marked.parse(content);
+        }
+
+        return {
+          phase, loading, error, form, report, birthYear, activeTab, tabs,
+          currentBlock, currentMeta, submit, reset, levelLabel, levelClass,
+          dailyQuote, showAdvanced, todayISO,
+          showSopPath, pathData, pathLoading, pathError,
+          selectedPathPart, expandedPathChapter, currentPathPart,
+          openSopPath, selectPathPart, togglePathChapter,
+          chapterPreview, renderPathMarkdown,
+        };
+      },
+    }).mount('#app');
+  </script>
+</body>
+</html>
