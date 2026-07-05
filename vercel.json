@@ -1,7 +1,3 @@
 {
-  "version": 2,
-  "entrypoint": "api/meihua.py",
-  "routes": [
-    { "src": "/api/meihua", "dest": "/api/meihua" }
-  ]
+  "version": 2
 }
