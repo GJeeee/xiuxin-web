@@ -1,17 +1,15 @@
-"""Vercel Flask 入口：/api/meihua
+"""Vercel Serverless Function: /api/meihua
 
-作为 Vercel 的 Flask entrypoint 部署。算法逻辑与本地 web_app.py 一致：
-起卦 (meihua.divine) → 事实表 → 调 LLM 断卦 (llm.chat) → 返回 JSON。
-
+纯 Python handler（不依赖 Flask），供 GitHub Pages 前端调用。
+算法逻辑与本地 web_app.py 一致：起卦 (meihua.divine) → 事实表 → 调 LLM 断卦。
 DeepSeek key 放在 Vercel 项目环境变量里，绝不进仓库。
 """
+from http.server import BaseHTTPRequestHandler
 import datetime
 import importlib.util
-import os
+import json
 import sys
 from pathlib import Path
-
-from flask import Flask, jsonify, request
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -31,74 +29,91 @@ llm_chat = _llm_mod.chat
 
 _MEIHUA_PROMPT = (_REPO_ROOT / "prompts" / "meihua.txt").read_text(encoding="utf-8")
 
-# 允许的前端来源（GitHub Pages + 本地调试）
 _ALLOWED_ORIGINS = {
     "https://gjeeeee.github.io",
     "http://127.0.0.1:9878",
     "http://localhost:9878",
 }
 
-app = Flask(__name__)
 
-
-@app.after_request
-def add_cors(resp):
-    origin = request.headers.get("Origin", "")
+def _cors(origin: str) -> dict:
     allow = origin if origin in _ALLOWED_ORIGINS else "*"
-    resp.headers["Access-Control-Allow-Origin"] = allow
-    resp.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
-    resp.headers["Access-Control-Allow-Headers"] = "Content-Type"
-    resp.headers["Vary"] = "Origin"
-    return resp
+    return {
+        "Access-Control-Allow-Origin": allow,
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type",
+        "Vary": "Origin",
+    }
 
 
-@app.route("/api/meihua", methods=["POST", "OPTIONS"])
-def meihua_api():
-    if request.method == "OPTIONS":
-        return ("", 204)
+def _divine_once(data: dict) -> tuple:
+    """返回 (status, payload)。与 web_app.py 同逻辑。"""
+    question = (data.get("question") or "").strip()
+    gender = data.get("gender", "男")
+    grab_lower = int(data["grab_lower"])
+    grab_upper = int(data["grab_upper"])
+    dt_str = data.get("datetime")
+    dt = datetime.datetime.fromisoformat(dt_str) if dt_str else datetime.datetime.now()
 
-    data = request.get_json(force=True, silent=True) or {}
+    if not question:
+        return 400, {"ok": False, "error": "请填写问卦事"}
+    if grab_lower <= 0 or grab_upper <= 0:
+        return 400, {"ok": False, "error": "捏米数必须大于 0"}
+
+    div = meihua_mod.divine(question, gender, grab_lower, grab_upper, dt)
+    fact = meihua_mod.to_fact_table(div)
+    fact_text = meihua_mod.fact_table_to_text(div)
+
+    interpretation = None
+    interp_error = None
     try:
-        question = (data.get("question") or "").strip()
-        gender = data.get("gender", "男")
-        grab_lower = int(data["grab_lower"])
-        grab_upper = int(data["grab_upper"])
-        dt_str = data.get("datetime")
-        dt = datetime.datetime.fromisoformat(dt_str) if dt_str else datetime.datetime.now()
-
-        if not question:
-            return jsonify({"ok": False, "error": "请填写问卦事"}), 400
-        if grab_lower <= 0 or grab_upper <= 0:
-            return jsonify({"ok": False, "error": "捏米数必须大于 0"}), 400
-
-        div = meihua_mod.divine(question, gender, grab_lower, grab_upper, dt)
-        fact = meihua_mod.to_fact_table(div)
-        fact_text = meihua_mod.fact_table_to_text(div)
-
-        interpretation = None
-        interp_error = None
-        try:
-            user_msg = f"以下是起卦得到的事实表，请据此断卦：\n\n{fact_text}"
-            interpretation = llm_chat([{"role": "user", "content": user_msg}], system=_MEIHUA_PROMPT)
-        except Exception as e:
-            interp_error = f"老先生过卦失败：{e}（卦象与事实表仍可参考）"
-
-        return jsonify({
-            "ok": True,
-            "fact_table": fact,
-            "interpretation": interpretation,
-            "interp_error": interp_error,
-        })
-    except (KeyError, ValueError, TypeError) as e:
-        return jsonify({"ok": False, "error": f"输入有误：{e}"}), 400
+        user_msg = f"以下是起卦得到的事实表，请据此断卦：\n\n{fact_text}"
+        interpretation = llm_chat([{"role": "user", "content": user_msg}], system=_MEIHUA_PROMPT)
     except Exception as e:
-        return jsonify({"ok": False, "error": f"断卦失败：{e}"}), 500
+        interp_error = f"老先生过卦失败：{e}（卦象与事实表仍可参考）"
+
+    return 200, {
+        "ok": True,
+        "fact_table": fact,
+        "interpretation": interpretation,
+        "interp_error": interp_error,
+    }
 
 
-@app.route("/", methods=["GET"])
-def health():
-    return jsonify({"status": "ok", "service": "meihua-api"})
+class handler(BaseHTTPRequestHandler):
+    def do_OPTIONS(self):
+        origin = self.headers.get("Origin", "")
+        self.send_response(204)
+        for k, v in _cors(origin).items():
+            self.send_header(k, v)
+        self.end_headers()
 
+    def do_POST(self):
+        origin = self.headers.get("Origin", "")
+        length = int(self.headers.get("Content-Length", 0) or 0)
+        raw = self.rfile.read(length) if length else b""
+        try:
+            data = json.loads(raw.decode("utf-8")) if raw else {}
+        except Exception:
+            self._send(400, {"ok": False, "error": "请求体不是合法 JSON"}, origin)
+            return
+        try:
+            status, payload = _divine_once(data)
+            self._send(status, payload, origin)
+        except (KeyError, ValueError, TypeError) as e:
+            self._send(400, {"ok": False, "error": f"输入有误：{e}"}, origin)
+        except Exception as e:
+            self._send(500, {"ok": False, "error": f"断卦失败：{e}"}, origin)
 
-if __name__ == "__main__":
-    app.run()
+    def _send(self, status, payload, origin):
+        body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        for k, v in _cors(origin).items():
+            self.send_header(k, v)
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def log_message(self, *args):
+        pass

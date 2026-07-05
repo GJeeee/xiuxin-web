@@ -1,0 +1,18 @@
+# 让 Vercel 忽略本地开发用的文件，避免误判成 Flask 项目
+# web_app.py 是本地调试用的 Flask 应用，部署不需要看到它
+web_app.py
+bot.py
+paipan.py
+xiuxing_engine.py
+profiles.py
+run-daemon.sh
+*.sh
+*.command
+*.md
+*.pdf
+.cursor/
+scripts/
+data/
+logs/
+tmp_pdf_pages/
+.tmp_*

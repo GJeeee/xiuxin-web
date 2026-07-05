@@ -1,4 +1,4 @@
-# Vercel 后端依赖
-# api/meihua.py 用 Flask 作入口；llm.py 用 httpx 调 DeepSeek；meihua.py 纯标准库
-flask>=3.0
+# Vercel serverless 函数依赖
+# meihua.py 纯标准库；llm.py 用 httpx 调 DeepSeek
+# 注意：不要加 flask，否则 Vercel 会误判成 Flask 项目
 httpx>=0.27
